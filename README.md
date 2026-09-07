@@ -96,7 +96,7 @@ behind `import.meta.env.DEV` and do not exist in a production build.
 | `npm run types:gen` | Regenerate `src/types/database.ts` from the schema|
 | `npm run fn:serve`  | Serve edge functions locally                      |
 | `npm run fn:deploy` | Deploy all edge functions                         |
-| `npm run deploy`    | Build + `wrangler pages deploy`                   |
+| `npm run deploy`    | Build + direct upload to Pages                    |
 
 ## Deploy (Cloudflare Pages)
 
@@ -126,7 +126,7 @@ VITE_SUPABASE_URL        https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY   <anon public key>
 ```
 
-Three things about these that cause most first-deploy failures:
+Four things about these that cause most first-deploy failures:
 
 - **They are inlined at build time**, not read at runtime. Changing one in the
   dashboard does nothing until you redeploy.
@@ -135,6 +135,11 @@ Three things about these that cause most first-deploy failures:
   The service-role key must never be set here.
 - **Do not set `NODE_ENV=production`.** `npm run build` runs `tsc -b` first,
   which needs devDependencies; Pages skips installing them if you do.
+- **Do not commit a `wrangler.jsonc` / `wrangler.toml` to the repo root.** When
+  Pages finds one it reads build configuration from that file and *ignores the
+  dashboard environment variables entirely* — the build log prints
+  `Build environment variables: (none found)` and the site ships as a blank
+  page. This project deliberately has no Wrangler config file.
 
 ### Two ways to ship
 
@@ -146,7 +151,7 @@ build runs on Cloudflare, so it uses the **dashboard** env vars.
 
 ```bash
 npx wrangler login
-npm run deploy          # build + wrangler pages deploy
+npm run deploy          # build + wrangler pages deploy dist
 ```
 
 This builds **locally**, so it uses your **`.env.local`** — not the dashboard
