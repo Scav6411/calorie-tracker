@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ChartNoAxesColumn, List, Settings } from 'lucide-react'
+import { ChartNoAxesColumn, List, RefreshCw, Settings } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,7 +16,7 @@ import { LogWeightSheet } from '@/components/home/log-weight-sheet'
 import { SettingsSheet } from '@/components/home/settings-sheet'
 import { WelcomeScreen } from './welcome'
 import { useAuth } from '@/hooks/use-auth'
-import { formatHour, toDayKey, type DaySummary } from '@/lib/mock-data'
+import { toDayKey, type DaySummary } from '@/lib/mock-data'
 import { demoMealLog, generateDemoMealLogs } from '@/lib/demo-data'
 import {
   deleteMealLog,
@@ -30,8 +30,10 @@ import {
 import { useDayMeals } from '@/hooks/use-day-meals'
 import { useRecentFoods } from '@/hooks/use-recent-foods'
 import { cn } from '@/lib/utils'
-import { dayTotals, toDecimalHour, toHourlyBurn } from '@/lib/energy'
+import { dayTotals, syncAgeLabel, toHourlyBurn } from '@/lib/energy'
 import { useDayEnergy } from '@/hooks/use-day-energy'
+import { useSyncCatchUp } from '@/hooks/use-sync-catchup'
+import { useEnergyRealtime } from '@/hooks/use-energy-realtime'
 import { useToday } from '@/hooks/use-today'
 import { parseDayKey } from '@/lib/trend-math'
 
@@ -63,6 +65,14 @@ export function HomePage({ demo = false }: { demo?: boolean }) {
   const [relogging, setRelogging] = useState<string | null>(null)
 
   const energy = useDayEnergy(date, Boolean(session), demo)
+  // The app is opened from a Home Screen Shortcut that also runs the Health
+  // sync, so on launch the upload is still in flight when the page first reads
+  // energy_readings. Only for today: a past day has nothing arriving for it.
+  // Primary: the row is pushed the instant apple-health-sync writes it.
+  useEnergyRealtime(session?.user.id ?? null, energy.reload, !demo && Boolean(session))
+  // Fallback, two cheap queries: covers the socket not being up yet at launch,
+  // and the case where the realtime migration has not been pushed.
+  useSyncCatchUp(energy.reload, !demo && Boolean(session) && picked === null)
   const mealState = useDayMeals(date, Boolean(session) && !demo)
   const recent = useRecentFoods(Boolean(session) && !demo, demo)
   // Demo has no session to write with, so logs live in memory for the session.
@@ -158,9 +168,7 @@ export function HomePage({ demo = false }: { demo?: boolean }) {
     if (energy.loading) burnSource = 'Loading Health data...'
     else if (energy.error) burnSource = energy.error
     else if (totals) {
-      burnSource = `Burned via Apple Health \u00b7 synced ${formatHour(
-        toDecimalHour(totals.lastSyncedAt),
-      )}`
+      burnSource = `Burned via Apple Health \u00b7 synced ${syncAgeLabel(totals.lastSyncedAt)}`
     } else burnSource = 'No Health sync for this day yet'
 
     return { date, eaten, burned, burnSource }
@@ -183,14 +191,33 @@ export function HomePage({ demo = false }: { demo?: boolean }) {
     <div className="flex min-h-0 flex-1 flex-col gap-4 pb-3">
       <ScreenHeader
         action={
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Settings"
-          >
-            <Settings className="size-5" aria-hidden />
-          </Button>
+          // In the header rather than a third Quick Action: Home is a fixed
+          // h-svh with no scroll, and this row already exists.
+          <div className="flex shrink-0 items-center">
+            {/* Refetches what the Shortcut already uploaded. Deliberately
+                NOT the Shortcuts handoff: that one leaves the app, and once a
+                Personal Automation is running there is nothing to trigger. */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => void energy.reload()}
+              disabled={energy.loading}
+              aria-label="Refresh Health data"
+            >
+              <RefreshCw
+                className={cn('size-5', energy.loading && 'animate-spin')}
+                aria-hidden
+              />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+            >
+              <Settings className="size-5" aria-hidden />
+            </Button>
+          </div>
         }
       >
         <DateSwitcher value={date} onChange={setDate} />

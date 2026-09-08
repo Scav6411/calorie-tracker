@@ -86,3 +86,25 @@ export function toHourlyBurn(readings: EnergyReading[]): HourlyBurn[] {
 
   return result
 }
+
+/**
+ * How stale the Health sync is, in words.
+ *
+ * A clock time ("synced 14:32") does not answer the question actually being
+ * asked, which is "did the automation fire?". iOS defers time-of-day
+ * automations while the phone is locked, so the gap between the last upload and
+ * now is the thing worth showing.
+ */
+export function syncAgeLabel(lastSyncedAt: string, now: Date = new Date()): string {
+  const minutes = Math.floor((now.getTime() - new Date(lastSyncedAt).getTime()) / 60_000)
+
+  // A clock skew between the phone and the server can put this slightly ahead.
+  if (minutes < 2) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+
+  const days = Math.floor(hours / 24)
+  return days === 1 ? 'yesterday' : `${days}d ago`
+}

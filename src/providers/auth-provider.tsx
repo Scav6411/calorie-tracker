@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { AuthContext } from './auth-context'
+import { authRedirectUrl } from '@/lib/auth-redirect'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -36,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail: async (email: string) => {
         const { error } = await supabase.auth.signInWithOtp({
           email,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+          options: { emailRedirectTo: authRedirectUrl(window.location.origin) },
         })
         return { error: error?.message ?? null }
       },

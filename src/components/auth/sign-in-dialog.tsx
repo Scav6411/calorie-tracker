@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/use-auth'
+import { authRedirectUrl } from '@/lib/auth-redirect'
 
 export function SignInDialog({ trigger }: { trigger: ReactNode }) {
   const { signInWithEmail } = useAuth()
@@ -51,6 +52,17 @@ export function SignInDialog({ trigger }: { trigger: ReactNode }) {
               : 'Enter your email and we will send you a magic link. No password needed.'}
           </DialogDescription>
         </DialogHeader>
+
+        {sent && import.meta.env.DEV && (
+          // Dev only. Supabase falls back to the project's Site URL when a
+          // redirect is not on the allow-list, so a mismatch looks like landing
+          // on the wrong host with no error anywhere. Showing what was actually
+          // requested turns that into a character-by-character comparison.
+          <p className="text-muted-foreground text-xs break-all">
+            Link returns to <code>{authRedirectUrl(window.location.origin)}</code> — this must be
+            listed verbatim under Authentication → URL Configuration → Redirect URLs.
+          </p>
+        )}
 
         {!sent && (
           <form onSubmit={handleSubmit} className="grid gap-4">

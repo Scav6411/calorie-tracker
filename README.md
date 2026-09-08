@@ -285,14 +285,55 @@ Over plain http on a LAN IP the **Copy token** button falls back to
 it fails, the token is `select-all` -- long-press to select it by hand. Not an
 issue on the deployed https domain.
 
+### Triggering a sync
+
+**Launch the app from a Shortcut, not from Safari.** The Home Screen icon is a
+Shortcut whose actions are, in order:
+
+1. **Open URL** -> the app
+2. **Run Shortcut** -> Sync Health Data
+
+Opening the app *is* the sync trigger, so it cannot be missed. This beats a
+time-of-day Personal Automation, which iOS defers or drops while the phone is
+locked, and it is the only reliable option: a web page cannot run a Shortcut in
+the background, because iOS always foregrounds the app a URL scheme targets, and
+there is no HealthKit web API to go around it.
+
+### Getting the reading on screen
+
+Action 1 hands off to Safari and the page reads `energy_readings` while action
+2's upload is still travelling, so a naive first render shows the *previous*
+sync. Three things close that, in order of how much they are relied on:
+
+- **`useEnergyRealtime`** -- a Postgres subscription. The edge function writes
+  the row, Postgres publishes the change, the day refetches. No polling and no
+  guess at timing. `energy_readings` has to be in the `supabase_realtime`
+  publication for this to receive anything, which is what the
+  `20260908130000_energy_realtime` migration does. RLS applies to the
+  subscription, so a socket only ever carries rows its own select policy would
+  have returned.
+- **`useSyncCatchUp`** -- refetches at 2.5s and 7s, covering the socket not
+  being connected yet at launch. Fixed delays rather than polling until
+  something changes: nothing can distinguish "the upload has not landed yet"
+  from "the Shortcut never ran", and a loop that cannot tell those apart would
+  spin forever on the second.
+- **The circular-arrows button** in the Home header -- a plain refetch, for when
+  both of the above have had their turn.
+
+The line under Eaten/Burned reports staleness (`synced 3h ago`) rather than a
+clock time, because the question being asked is "did the sync run?".
+
 
 ## Edge functions
 
 `supabase/functions/health` is the template: it handles CORS preflight, verifies
 the caller's JWT, and returns the user id. Copy it for real functions.
 
-Add the production origin to `ALLOWED_ORIGINS` in
-`supabase/functions/_shared/cors.ts` once the Pages domain exists.
+Browser origins are allowed in `supabase/functions/_shared/cors.ts`:
+`PRODUCTION_ORIGINS` for the apex Pages domain, `PAGES_ORIGIN` for the
+per-deployment preview hostnames, `LOCAL_ORIGIN` for localhost and the LAN.
+Add a custom domain there and redeploy the functions, or the browser cannot
+call any of them from it.
 
 Secrets:
 
