@@ -14,14 +14,27 @@ const CHART_CONFIG = {
   resting: { label: 'Resting burn', color: 'var(--border)' },
 } satisfies ChartConfig
 
-const DAY_START = 5
+// The whole day. Resting burn is recorded every hour including while asleep,
+// so starting at 05:00 - which made sense when the early hours were empty -
+// now folds real overnight readings into the 5am bar.
+const DAY_START = 0
 const DAY_END = 23
+
+const ALL_HOURS = Array.from({ length: DAY_END - DAY_START + 1 }, (_, index) => DAY_START + index)
 
 interface HourPoint {
   hour: number
   eaten: number
   active: number
   resting: number
+}
+
+/**
+ * 24-hour clock on the axis. Every hour is labelled, so "13" fits where "1p"
+ * would not, and it cannot be misread as 1am.
+ */
+function axisHour(value: number) {
+  return String(Math.round(value))
 }
 
 function shortHour(value: number) {
@@ -77,19 +90,21 @@ export function DayTimelineChart({
 
   return (
     <ChartContainer config={CHART_CONFIG} className="aspect-auto h-full w-full">
-      <BarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 4 }}>
+      <BarChart data={data} margin={{ top: 8, right: 2, bottom: 0, left: 2 }} barGap={1}>
         <XAxis
           dataKey="hour"
           type="number"
           domain={[DAY_START, DAY_END]}
-          ticks={[6, 9, 12, 15, 18, 21]}
-          tickFormatter={shortHour}
+          ticks={ALL_HOURS}
+          interval={0}
+          tickFormatter={axisHour}
+          tick={{ fontSize: 9 }}
           tickLine={false}
           axisLine={false}
-          tickMargin={6}
+          tickMargin={4}
         />
         <YAxis hide domain={[-bound, bound]} />
-        <ReferenceLine y={0} stroke="var(--border)" />
+        <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="2 3" />
         <ChartTooltip
           cursor={false}
           content={
@@ -102,9 +117,9 @@ export function DayTimelineChart({
             />
           }
         />
-        <Bar dataKey="eaten" fill="var(--color-eaten)" barSize={9} radius={2} isAnimationActive={false} />
-        <Bar dataKey="resting" stackId="burn" fill="var(--color-resting)" barSize={9} isAnimationActive={false} />
-        <Bar dataKey="active" stackId="burn" fill="var(--color-active)" barSize={9} radius={2} isAnimationActive={false} />
+        <Bar dataKey="eaten" fill="var(--color-eaten)" barSize={6} radius={2} isAnimationActive={false} />
+        <Bar dataKey="resting" stackId="burn" fill="var(--color-resting)" barSize={6} isAnimationActive={false} />
+        <Bar dataKey="active" stackId="burn" fill="var(--color-active)" barSize={6} radius={2} isAnimationActive={false} />
       </BarChart>
     </ChartContainer>
   )
