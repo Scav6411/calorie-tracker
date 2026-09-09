@@ -22,6 +22,14 @@ const DAY_END = 23
 
 const ALL_HOURS = Array.from({ length: DAY_END - DAY_START + 1 }, (_, index) => DAY_START + index)
 
+/**
+ * Width each hour gets, in px. Twenty-four hours share about 340px on a phone,
+ * which is 14px an hour - too narrow for a pair of bars and a label, and no
+ * rearranging fixes that. So the chart is drawn at the width it needs and
+ * scrolled sideways instead of being squeezed into the screen.
+ */
+const HOUR_WIDTH = 36
+
 interface HourPoint {
   hour: number
   eaten: number
@@ -89,38 +97,42 @@ export function DayTimelineChart({
   const bound = Math.ceil((peak * 1.2) / 50) * 50
 
   return (
-    <ChartContainer config={CHART_CONFIG} className="aspect-auto h-full w-full">
-      <BarChart data={data} margin={{ top: 8, right: 2, bottom: 0, left: 2 }} barGap={1}>
-        <XAxis
-          dataKey="hour"
-          type="number"
-          domain={[DAY_START, DAY_END]}
-          ticks={ALL_HOURS}
-          interval={0}
-          tickFormatter={axisHour}
-          tick={{ fontSize: 9 }}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={4}
-        />
-        <YAxis hide domain={[-bound, bound]} />
-        <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="2 3" />
-        <ChartTooltip
-          cursor={false}
-          content={
-            <ChartTooltipContent
-              labelFormatter={(_, payload) => {
-                const point = payload?.[0]?.payload as HourPoint | undefined
-                return point ? hourRange(point.hour) : ''
-              }}
-              formatter={(value, name) => `${CHART_CONFIG[name as keyof typeof CHART_CONFIG]?.label ?? name}: ${Math.abs(Number(value))} kcal`}
+    <div className="h-full w-full overflow-x-auto overflow-y-hidden overscroll-x-contain">
+      <div className="h-full" style={{ minWidth: `${ALL_HOURS.length * HOUR_WIDTH}px` }}>
+        <ChartContainer config={CHART_CONFIG} className="aspect-auto h-full w-full">
+          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} barGap={2}>
+            <XAxis
+              dataKey="hour"
+              type="number"
+              domain={[DAY_START, DAY_END]}
+              ticks={ALL_HOURS}
+              interval={0}
+              tickFormatter={axisHour}
+              tick={{ fontSize: 10 }}
+              tickLine={false}
+              axisLine={false}
+              tickMargin={4}
             />
-          }
-        />
-        <Bar dataKey="eaten" fill="var(--color-eaten)" barSize={6} radius={2} isAnimationActive={false} />
-        <Bar dataKey="resting" stackId="burn" fill="var(--color-resting)" barSize={6} isAnimationActive={false} />
-        <Bar dataKey="active" stackId="burn" fill="var(--color-active)" barSize={6} radius={2} isAnimationActive={false} />
-      </BarChart>
-    </ChartContainer>
+            <YAxis hide domain={[-bound, bound]} />
+            <ReferenceLine y={0} stroke="var(--border)" strokeDasharray="2 3" />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(_, payload) => {
+                    const point = payload?.[0]?.payload as HourPoint | undefined
+                    return point ? hourRange(point.hour) : ''
+                  }}
+                  formatter={(value, name) => `${CHART_CONFIG[name as keyof typeof CHART_CONFIG]?.label ?? name}: ${Math.abs(Number(value))} kcal`}
+                />
+              }
+            />
+            <Bar dataKey="eaten" fill="var(--color-eaten)" barSize={13} radius={2} isAnimationActive={false} />
+            <Bar dataKey="resting" stackId="burn" fill="var(--color-resting)" barSize={13} isAnimationActive={false} />
+            <Bar dataKey="active" stackId="burn" fill="var(--color-active)" barSize={13} radius={2} isAnimationActive={false} />
+          </BarChart>
+        </ChartContainer>
+      </div>
+    </div>
   )
 }
