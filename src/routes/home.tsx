@@ -69,7 +69,11 @@ export function HomePage({ demo = false }: { demo?: boolean }) {
   // sync, so on launch the upload is still in flight when the page first reads
   // energy_readings. Only for today: a past day has nothing arriving for it.
   // Primary: the row is pushed the instant apple-health-sync writes it.
-  useEnergyRealtime(session?.user.id ?? null, energy.reload, !demo && Boolean(session))
+  const liveStatus = useEnergyRealtime(
+    session?.user.id ?? null,
+    energy.reload,
+    !demo && Boolean(session),
+  )
   // Fallback, two cheap queries: covers the socket not being up yet at launch,
   // and the case where the realtime migration has not been pushed.
   useSyncCatchUp(energy.reload, !demo && Boolean(session) && picked === null)
@@ -169,10 +173,14 @@ export function HomePage({ demo = false }: { demo?: boolean }) {
     else if (energy.error) burnSource = energy.error
     else if (totals) {
       burnSource = `Burned via Apple Health \u00b7 synced ${syncAgeLabel(totals.lastSyncedAt)}`
+      // Dev only. Every way this subscription can fail is silent, and the
+      // symptom - data that appears only on reload - is identical for all of
+      // them. A console log is no use on the phone this runs on.
+      if (import.meta.env.DEV) burnSource += ` \u00b7 live: ${liveStatus}`
     } else burnSource = 'No Health sync for this day yet'
 
     return { date, eaten, burned, burnSource }
-  }, [date, meals, totals, energy.loading, energy.error])
+  }, [date, meals, totals, energy.loading, energy.error, liveStatus])
 
   if (loading && !demo) {
     return (

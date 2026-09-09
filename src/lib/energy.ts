@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { toDayKey } from '@/lib/mock-data'
-import type { EnergyReading } from '@/lib/energy-math'
+import type { EnergyGranularity, EnergyReading } from '@/lib/energy-math'
 
 export * from '@/lib/energy-math'
 
@@ -48,7 +48,7 @@ export async function fetchReadings(date: Date): Promise<EnergyReading[]> {
   const { start, end } = localDayBounds(date)
   const { data, error } = await supabase
     .from('energy_readings')
-    .select('id, synced_at, active_energy, resting_energy, total_energy')
+    .select('id, synced_at, active_energy, resting_energy, total_energy, granularity, updated_at')
     .gte('synced_at', start)
     .lt('synced_at', end)
     .order('synced_at', { ascending: true })
@@ -60,6 +60,8 @@ export async function fetchReadings(date: Date): Promise<EnergyReading[]> {
     active_energy: num(row.active_energy),
     resting_energy: num(row.resting_energy),
     total_energy: num(row.total_energy),
+    granularity: (row.granularity as EnergyGranularity | null) ?? 'cumulative',
+    updated_at: (row.updated_at as string | null) ?? (row.synced_at as string),
   }))
 }
 

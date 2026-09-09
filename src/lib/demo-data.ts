@@ -27,9 +27,9 @@ const RESTING_PER_HOUR = [
 
 
 /**
- * Hourly cumulative readings, exactly as Apple Health reports them: totals that
- * climb through the day and reset at midnight. Stops at the current hour when
- * the requested day is today.
+ * One row per hour, matching what the Health Shortcut uploads: the burn inside
+ * that hour alone, not a running total. Stops at the current hour when the
+ * requested day is today, so the demo day fills in as the real one would.
  */
 export function generateDemoReadings(date: Date): EnergyReading[] {
   const now = new Date()
@@ -37,12 +37,10 @@ export function generateDemoReadings(date: Date): EnergyReading[] {
   const lastHour = isToday ? now.getHours() : 23
 
   const readings: EnergyReading[] = []
-  let active = 0
-  let resting = 0
 
   for (let hour = 0; hour <= lastHour; hour += 1) {
-    active += ACTIVE_PER_HOUR[hour]
-    resting += RESTING_PER_HOUR[hour]
+    const active = ACTIVE_PER_HOUR[hour]
+    const resting = RESTING_PER_HOUR[hour]
 
     const synced = new Date(date)
     synced.setHours(hour, 0, 0, 0)
@@ -50,9 +48,13 @@ export function generateDemoReadings(date: Date): EnergyReading[] {
     readings.push({
       id: `demo-${hour}`,
       synced_at: synced.toISOString(),
-      active_energy: Number(active.toFixed(2)),
-      resting_energy: Number(resting.toFixed(2)),
-      total_energy: Number((active + resting).toFixed(2)),
+      active_energy: active,
+      resting_energy: resting,
+      total_energy: active + resting,
+      granularity: 'hourly',
+      // The demo has no real upload behind it; the last bucket stands in, which
+      // keeps the "synced ..." line moving as the day goes on.
+      updated_at: synced.toISOString(),
     })
   }
 

@@ -43,60 +43,78 @@ export type Database = {
         Row: {
           active_energy: number
           created_at: string
+          granularity: string
           id: string
           resting_energy: number
           source: string
           synced_at: string
           total_energy: number | null
+          updated_at: string
           user_id: string
         }
         Insert: {
           active_energy: number
           created_at?: string
+          granularity?: string
           id?: string
           resting_energy: number
           source?: string
           synced_at: string
           total_energy?: number | null
+          updated_at?: string
           user_id: string
         }
         Update: {
           active_energy?: number
           created_at?: string
+          granularity?: string
           id?: string
           resting_energy?: number
           source?: string
           synced_at?: string
           total_energy?: number | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
       food_items: {
         Row: {
+          brand: string | null
           calories_per_unit: number
           created_at: string
           default_unit: string
           id: string
           name: string
+          nutrition: Json | null
+          raw_vlm_response: Json | null
+          source: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          brand?: string | null
           calories_per_unit: number
           created_at?: string
           default_unit?: string
           id?: string
           name: string
+          nutrition?: Json | null
+          raw_vlm_response?: Json | null
+          source?: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          brand?: string | null
           calories_per_unit?: number
           created_at?: string
           default_unit?: string
           id?: string
           name?: string
+          nutrition?: Json | null
+          raw_vlm_response?: Json | null
+          source?: string
           updated_at?: string
           user_id?: string | null
         }
